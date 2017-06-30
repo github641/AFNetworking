@@ -44,6 +44,10 @@ NS_ASSUME_NONNULL_BEGIN
                            data:(nullable NSData *)data
                           error:(NSError * _Nullable __autoreleasing *)error NS_SWIFT_NOTHROW;
 
+/*
+ 遵循这个协议的类同时也要遵循 NSObject、NSSecureCoding 和 NSCopying 这三个协议，实现安全编码、拷贝以及 Objective-C 对象的基本行为。仅看 AFURLResponseSerialization 协议对类的要求还是十分的简单，返回对特定响应的数据解码后的对象.
+ */
+
 @end
 
 #pragma mark -

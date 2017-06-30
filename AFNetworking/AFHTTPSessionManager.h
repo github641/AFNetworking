@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+
+
 #import <Foundation/Foundation.h>
 #if !TARGET_OS_WATCH
 #import <SystemConfiguration/SystemConfiguration.h>
@@ -104,7 +106,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) AFSecurityPolicy *securityPolicy;
 
 ///---------------------
-/// @name Initialization
+/// @name Initialization 以服务器的主机地址或者域名生成一个 AFHTTPSessionManager 的实例
 ///---------------------
 
 /**

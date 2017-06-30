@@ -66,6 +66,9 @@
 - (instancetype)initWithBaseURL:(NSURL *)url
            sessionConfiguration:(NSURLSessionConfiguration *)configuration
 {
+    /* lzy注170630：
+      super 调用了父类AFURLSessionManager的初始化方法，做了很多初始化工作。
+     */
     self = [super initWithSessionConfiguration:configuration];
     if (!self) {
         return nil;
@@ -78,8 +81,8 @@
 
     self.baseURL = url;
 
-    self.requestSerializer = [AFHTTPRequestSerializer serializer];
-    self.responseSerializer = [AFJSONResponseSerializer serializer];
+    self.requestSerializer = [AFHTTPRequestSerializer serializer];// 负责序列化请求
+    self.responseSerializer = [AFJSONResponseSerializer serializer];// 负责序列化响应
 
     return self;
 }
@@ -264,6 +267,16 @@
     return dataTask;
 }
 
+/* lzy注170630：
+ 多个方法公用的方法：
+ 除了POST表单提交的方法：
+ - (NSURLSessionDataTask *)POST:parameters:constructingBodyWithBlock:progress:success:failure:
+ 直接调用了父类AFURLSessionManager的
+ - (NSURLSessionUploadTask *)uploadTaskWithStreamedRequest:progress:completionHandler:
+ 
+ 本类的其他方法，get\head\post\put\patch\delete方法都进了此方法
+ 
+ */
 - (NSURLSessionDataTask *)dataTaskWithHTTPMethod:(NSString *)method
                                        URLString:(NSString *)URLString
                                       parameters:(id)parameters
@@ -273,6 +286,7 @@
                                          failure:(void (^)(NSURLSessionDataTask *, NSError *))failure
 {
     NSError *serializationError = nil;
+    // 返回 NSMutableURLRequest
     NSMutableURLRequest *request = [self.requestSerializer requestWithMethod:method URLString:[[NSURL URLWithString:URLString relativeToURL:self.baseURL] absoluteString] parameters:parameters error:&serializationError];
     if (serializationError) {
         if (failure) {
@@ -284,6 +298,10 @@
         return nil;
     }
 
+    // 返回 NSURLSessionDataTask
+    /* lzy注170630：
+     调用了它父类AFURLSessionManager的方法
+     */
     __block NSURLSessionDataTask *dataTask = nil;
     dataTask = [self dataTaskWithRequest:request
                           uploadProgress:uploadProgress

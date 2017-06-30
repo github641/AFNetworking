@@ -19,7 +19,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-
+/* lzy注170630：
+ AFURLSessionManager 工作内容：
+    1.	负责创建和管理 NSURLSession
+	2.	管理 NSURLSessionTask
+	3.	实现 NSURLSessionDelegate 等协议中的代理方法
+	4.	使用 AFURLSessionManagerTaskDelegate 管理进度
+	5.	使用 _AFURLSessionTaskSwizzling 调剂方法
+	6.	引入 AFSecurityPolicy 保证请求的安全
+	7.	引入 AFNetworkReachabilityManager 监控网络状态
+ */
 #import <Foundation/Foundation.h>
 
 #import "AFURLResponseSerialization.h"
@@ -176,7 +185,9 @@ NS_ASSUME_NONNULL_BEGIN
  @see https://github.com/AFNetworking/AFNetworking/issues/1675
  */
 @property (nonatomic, assign) BOOL attemptsToRecreateUploadTasksForBackgroundSessions;
-
+/* lzy注170630：
+ NS_DESIGNATED_INITIALIZER 和这个初始化方法，是指定初始化方法、必须要调用的构造方法
+ */
 ///---------------------
 /// @name Initialization
 ///---------------------
