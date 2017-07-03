@@ -18,7 +18,15 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
+/* lzy注170703：
+ 
+ 一. AFNetworkReachabilityManager 实际上只是一个对底层 SystemConfiguration 库中的 C 函数封装的类，它为我们隐藏了 C 语言的实现，提供了统一的 Objective-C 语言接口
+ 二. 它是 AFNetworking 中一个即插即用的模块
+ 
+ 1. 初始化 AFNetworkReachabilityManager
+ 2. 调用 startMonitoring 方法开始对网络状态进行监控
+ 3. 设置 networkReachabilityStatusBlock 在每次网络状态改变时, 调用这个 block
+ */
 #import <Foundation/Foundation.h>
 
 #if !TARGET_OS_WATCH

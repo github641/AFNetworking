@@ -48,6 +48,9 @@ NSString * AFStringFromNetworkReachabilityStatus(AFNetworkReachabilityStatus sta
 }
 
 static AFNetworkReachabilityStatus AFNetworkReachabilityStatusForFlags(SCNetworkReachabilityFlags flags) {
+    /* lzy注170703：
+     flags 是一个 SCNetworkReachabilityFlags，它的不同位代表了不同的网络可达性状态，通过 flags 的位操作，获取当前的状态信息 AFNetworkReachabilityStatus。
+     */
     BOOL isReachable = ((flags & kSCNetworkReachabilityFlagsReachable) != 0);
     BOOL needsConnection = ((flags & kSCNetworkReachabilityFlagsConnectionRequired) != 0);
     BOOL canConnectionAutomatically = (((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) || ((flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0));
@@ -79,11 +82,21 @@ static AFNetworkReachabilityStatus AFNetworkReachabilityStatusForFlags(SCNetwork
  * the later update, resulting in the listener being left in the wrong state.
  */
 static void AFPostReachabilityStatusChange(SCNetworkReachabilityFlags flags, AFNetworkReachabilityStatusBlock block) {
+    /* lzy注170703：
+     AFNetworkReachabilityStatusForFlags函数，获取当前的网络可达性状态
+     */
     AFNetworkReachabilityStatus status = AFNetworkReachabilityStatusForFlags(flags);
     dispatch_async(dispatch_get_main_queue(), ^{
         if (block) {
+            /* lzy注170703：
+             在主线程中异步执行上面传入的 callback block（设置 self 的网络状态，调用 networkReachabilityStatusBlock）
+             */
             block(status);
         }
+        
+        /* lzy注170703：
+         发送 AFNetworkingReachabilityDidChangeNotification 通知。
+         */
         NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
         NSDictionary *userInfo = @{ AFNetworkingReachabilityNotificationStatusItem: @(status) };
         [notificationCenter postNotificationName:AFNetworkingReachabilityDidChangeNotification object:nil userInfo:userInfo];
@@ -91,6 +104,10 @@ static void AFPostReachabilityStatusChange(SCNetworkReachabilityFlags flags, AFN
 }
 
 static void AFNetworkReachabilityCallback(SCNetworkReachabilityRef __unused target, SCNetworkReachabilityFlags flags, void *info) {
+    /* lzy注170703：
+     从 info 中取出之前存在 context 中的 AFNetworkReachabilityStatusBlock。
+     把取出的数据传入函数AFPostReachabilityStatusChange
+     */
     AFPostReachabilityStatusChange(flags, (__bridge AFNetworkReachabilityStatusBlock)info);
 }
 
@@ -122,6 +139,14 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
 
     return _sharedManager;
 }
+
+/* lzy注170703：
+ 1. 这两个方法会通过一个域名或者一个 sockaddr_in 的指针生成一个 SCNetworkReachabilityRef
+ 2. 调用 - [AFNetworkReachabilityManager initWithReachability:] 
+ 将生成的 SCNetworkReachabilityRef 引用传给 networkReachability
+ 3. 设置一个默认的 networkReachabilityStatus为
+ AFNetworkReachabilityStatusUnknown
+ */
 
 + (instancetype)managerForDomain:(NSString *)domain {
     SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(kCFAllocatorDefault, [domain UTF8String]);
@@ -163,7 +188,11 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
     if (!self) {
         return nil;
     }
-
+    /* lzy注170703：
+     以前是这样写的：
+     self.networkReachability = CFBridgingRelease(reachability);
+     上一句会把 reachability 桥接成一个 NSObject 对象赋值给 self.networkReachability，然后释放原来的 CoreFoundation 对象。
+     */
     _networkReachability = CFRetain(reachability);
     self.networkReachabilityStatus = AFNetworkReachabilityStatusUnknown;
 
@@ -200,16 +229,26 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
 #pragma mark -
 
 - (void)startMonitoring {
+    /* lzy注170703：
+     判断是否 设置过对网络状态的监听 并取消
+     */
     [self stopMonitoring];
 
     if (!self.networkReachability) {
         return;
     }
 
+    /* lzy注170703：
+     创建一个回调,在每次网络状态改变时的调用
+     */
     __weak __typeof(self)weakSelf = self;
     AFNetworkReachabilityStatusBlock callback = ^(AFNetworkReachabilityStatus status) {
         __strong __typeof(weakSelf)strongSelf = weakSelf;
-
+        /* lzy注170703：
+         * 每次回调被调用时
+         * 重新设置 networkReachabilityStatus 属性
+         * 调用 networkReachabilityStatusBlock
+         */
         strongSelf.networkReachabilityStatus = status;
         if (strongSelf.networkReachabilityStatusBlock) {
             strongSelf.networkReachabilityStatusBlock(status);
@@ -217,12 +256,27 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
 
     };
 
+    /* lzy注170703：
+     1、传入上一步的回调对象：callback
+     2、这里的 AFNetworkReachabilityRetainCallback 和 AFNetworkReachabilityReleaseCallback
+     都是非常简单的 block，在回调被调用时，只是使用 Block_copy 和 Block_release 这样的宏
+     这两个block中需要传入的info 会以参数的形式在 AFNetworkReachabilityCallback 执行时传入
+     */
     SCNetworkReachabilityContext context = {0, (__bridge void *)callback, AFNetworkReachabilityRetainCallback, AFNetworkReachabilityReleaseCallback, NULL};
+    /* lzy注170703：
+     当目标的网络状态改变时，会调用传入的回调:SCNetworkReachabilitySetCallback
+     */
     SCNetworkReachabilitySetCallback(self.networkReachability, AFNetworkReachabilityCallback, &context);
+    /* lzy注170703：
+     在 Main Runloop 中对应的模式开始监控网络状态
+     */
     SCNetworkReachabilityScheduleWithRunLoop(self.networkReachability, CFRunLoopGetMain(), kCFRunLoopCommonModes);
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0),^{
         SCNetworkReachabilityFlags flags;
+        /* lzy注170703：
+         获取当前的网络状态，调用 callback
+         */
         if (SCNetworkReachabilityGetFlags(self.networkReachability, &flags)) {
             AFPostReachabilityStatusChange(flags, callback);
         }
@@ -233,7 +287,9 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
     if (!self.networkReachability) {
         return;
     }
-
+    /* lzy注170703：
+     这个方法，用于取消之前在 Main Runloop 中的监听
+     */
     SCNetworkReachabilityUnscheduleFromRunLoop(self.networkReachability, CFRunLoopGetMain(), kCFRunLoopCommonModes);
 }
 

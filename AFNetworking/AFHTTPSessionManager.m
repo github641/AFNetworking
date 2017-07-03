@@ -76,6 +76,9 @@
 
     // Ensure terminal slash for baseURL path, so that NSURL +URLWithString:relativeToURL: works as expected
     if ([[url path] length] > 0 && ![[url absoluteString] hasSuffix:@"/"]) {
+        /* lzy注170703：
+         url有值，且不是以左斜杆结尾，加上左斜杆。
+         */
         url = [url URLByAppendingPathComponent:@""];
     }
 
