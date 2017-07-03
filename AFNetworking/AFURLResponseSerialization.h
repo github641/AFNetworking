@@ -23,7 +23,10 @@
 #import <CoreGraphics/CoreGraphics.h>
 
 NS_ASSUME_NONNULL_BEGIN
-
+/* lzy注170703：
+ 整个 AFNetworking 项目中并不存在 AFURLResponseSerialization 这个类，这只是一个协议，遵循这个协议的类会将数据解码成更有意义的表现形式。协议的内容也非常简单，只有一个必须实现的方法。
+遵循这个协议的类同时也要遵循 NSObject、NSSecureCoding 和 NSCopying 这三个协议 实现安全编码、拷贝以及 Objective-C 对象的基本行为。
+ */
 /**
  The `AFURLResponseSerialization` protocol is adopted by an object that decodes data into a more useful object representation, according to details in the server response. Response serializers may additionally perform validation on the incoming response and data.
 

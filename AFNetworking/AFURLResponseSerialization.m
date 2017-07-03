@@ -59,7 +59,7 @@ static BOOL AFErrorOrUnderlyingErrorHasCodeInDomain(NSError *error, NSInteger co
 
     return NO;
 }
-
+//移除 JSON 中 null 的函数 AFJSONObjectByRemovingKeysWithNullValues 是一个递归调用的函数。
 static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingOptions readingOptions) {
     if ([JSONObject isKindOfClass:[NSArray class]]) {
         NSMutableArray *mutableArray = [NSMutableArray arrayWithCapacity:[(NSArray *)JSONObject count]];
@@ -73,6 +73,7 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
         for (id <NSCopying> key in [(NSDictionary *)JSONObject allKeys]) {
             id value = (NSDictionary *)JSONObject[key];
             if (!value || [value isEqual:[NSNull null]]) {
+                // 其中移除 null 靠的就是 [mutableDictionary removeObjectForKey:key] 这一行代码。
                 [mutableDictionary removeObjectForKey:key];
             } else if ([value isKindOfClass:[NSArray class]] || [value isKindOfClass:[NSDictionary class]]) {
                 mutableDictionary[key] = AFJSONObjectByRemovingKeysWithNullValues(value, readingOptions);
@@ -227,7 +228,9 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
     if (!self) {
         return nil;
     }
-
+    
+    //  AFJSONResponseSerializer 这个继承自 AFHTTPResponseSerializer 类的实现。初始化方法只是在调用父类的初始化方法之后更新了 acceptableContentTypes 属性：
+     
     self.acceptableContentTypes = [NSSet setWithObjects:@"application/json", @"text/json", @"text/javascript", nil];
 
     return self;
@@ -244,7 +247,8 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
             return nil;
         }
     }
-
+    
+    // 解决一个空格引起的 bug
     // Workaround for behavior of Rails to return a single space for `head :ok` (a workaround for a bug in Safari), which is not interpreted as valid input by NSJSONSerialization.
     // See https://github.com/rails/rails/issues/1742
     BOOL isSpace = [data isEqualToData:[NSData dataWithBytes:" " length:1]];
@@ -264,7 +268,7 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
         }
         return nil;
     }
-    
+    // 移除 JSON 中的 null，该属性默认为NO
     if (self.removesKeysWithNullValues) {
         return AFJSONObjectByRemovingKeysWithNullValues(responseObject, self.readingOptions);
     }

@@ -77,7 +77,7 @@ NSString * AFPercentEscapedStringFromString(NSString *string) {
 }
 
 #pragma mark -
-
+//处理查询参数的类
 @interface AFQueryStringPair : NSObject
 @property (readwrite, nonatomic, strong) id field;
 @property (readwrite, nonatomic, strong) id value;
@@ -101,6 +101,10 @@ NSString * AFPercentEscapedStringFromString(NSString *string) {
     return self;
 }
 
+/**
+ 返回 key=value 这种格式
+ 使用 AFPercentEscapedStringFromString 函数来对 field 和 value 进行处理，将其中的 :#[]@!$&'()*+,;= 等字符转换为百分号表示的形式。
+ */
 - (NSString *)URLEncodedStringValue {
     if (!self.value || [self.value isEqual:[NSNull null]]) {
         return AFPercentEscapedStringFromString([self.field description]);
@@ -115,9 +119,14 @@ NSString * AFPercentEscapedStringFromString(NSString *string) {
 
 FOUNDATION_EXPORT NSArray * AFQueryStringPairsFromDictionary(NSDictionary *dictionary);
 FOUNDATION_EXPORT NSArray * AFQueryStringPairsFromKeyAndValue(NSString *key, id value);
-
+// 将 各对key=value 这种格式的字符串使用&拼接起来
 NSString * AFQueryStringFromParameters(NSDictionary *parameters) {
     NSMutableArray *mutablePairs = [NSMutableArray array];
+    /* lzy注170703：
+     AFQueryStringPairsFromDictionary(parameters)方法调用 返回数组。
+     其实是AFQueryStringPairsFromKeyAndValue方法的调用返回的数组。
+     数组装着AFQueryStringPair对象
+     */
     for (AFQueryStringPair *pair in AFQueryStringPairsFromDictionary(parameters)) {
         [mutablePairs addObject:[pair URLEncodedStringValue]];
     }
@@ -133,7 +142,7 @@ NSArray * AFQueryStringPairsFromKeyAndValue(NSString *key, id value) {
     NSMutableArray *mutableQueryStringComponents = [NSMutableArray array];
 
     NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:@"description" ascending:YES selector:@selector(compare:)];
-
+// 如果当前的 value 是一个集合类型的话，那么它就会不断地递归调用自己。
     if ([value isKindOfClass:[NSDictionary class]]) {
         NSDictionary *dictionary = value;
         // Sort dictionary keys to ensure consistent ordering in query string, which is important when deserializing potentially ambiguous sequences, such as an array of dictionaries
@@ -143,17 +152,20 @@ NSArray * AFQueryStringPairsFromKeyAndValue(NSString *key, id value) {
                 [mutableQueryStringComponents addObjectsFromArray:AFQueryStringPairsFromKeyAndValue((key ? [NSString stringWithFormat:@"%@[%@]", key, nestedKey] : nestedKey), nestedValue)];
             }
         }
-    } else if ([value isKindOfClass:[NSArray class]]) {
+    } else if ([value isKindOfClass:[NSArray class]]) {// 如果当前的 value 是一个集合类型的话，那么它就会不断地递归调用自己。
         NSArray *array = value;
         for (id nestedValue in array) {
             [mutableQueryStringComponents addObjectsFromArray:AFQueryStringPairsFromKeyAndValue([NSString stringWithFormat:@"%@[]", key], nestedValue)];
         }
-    } else if ([value isKindOfClass:[NSSet class]]) {
+    } else if ([value isKindOfClass:[NSSet class]]) {// 如果当前的 value 是一个集合类型的话，那么它就会不断地递归调用自己。
         NSSet *set = value;
         for (id obj in [set sortedArrayUsingDescriptors:@[ sortDescriptor ]]) {
             [mutableQueryStringComponents addObjectsFromArray:AFQueryStringPairsFromKeyAndValue(key, obj)];
         }
     } else {
+        /* lzy注170703：
+         纯粹键值对，转为AFQueryStringPair实例对象并赋值field和value的值。之后都存放到数组，并返回
+         */
         [mutableQueryStringComponents addObject:[[AFQueryStringPair alloc] initWithField:key value:value]];
     }
 
@@ -205,9 +217,19 @@ static void *AFHTTPRequestSerializerObserverContext = &AFHTTPRequestSerializerOb
 
     self.stringEncoding = NSUTF8StringEncoding;
 
+    /* lzy注170703：
+     初始化一个集合，存放- (void)setValue:(NSString *)value
+     forHTTPHeaderField:(NSString *)field
+     
+     调用所设置的请求头部。
+     
+     */
     self.mutableHTTPRequestHeaders = [NSMutableDictionary dictionary];
     self.requestHeaderModificationQueue = dispatch_queue_create("requestHeaderModificationQueue", DISPATCH_QUEUE_CONCURRENT);
 
+    /* lzy注170703：
+     设置默认的Accept-Language、User-Agent
+     */
     // Accept-Language HTTP Header; see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.4
     NSMutableArray *acceptLanguagesComponents = [NSMutableArray array];
     [[NSLocale preferredLanguages] enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
@@ -216,7 +238,9 @@ static void *AFHTTPRequestSerializerObserverContext = &AFHTTPRequestSerializerOb
         *stop = q <= 0.5f;
     }];
     [self setValue:[acceptLanguagesComponents componentsJoinedByString:@", "] forHTTPHeaderField:@"Accept-Language"];
-
+    
+    /* lzy170614注：这个User-Agent与Safari浏览器的不一样，这个是afn根据规范定义拼接的。
+     */
     NSString *userAgent = nil;
 #if TARGET_OS_IOS
     // User-Agent Header; see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.43
@@ -237,9 +261,24 @@ static void *AFHTTPRequestSerializerObserverContext = &AFHTTPRequestSerializerOb
         [self setValue:userAgent forHTTPHeaderField:@"User-Agent"];
     }
 
+    /* lzy注170703：
+     定义一组有相同特点的http请求方法。
+     */
     // HTTP Method Definitions; see http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
     self.HTTPMethodsEncodingParametersInURI = [NSSet setWithObjects:@"GET", @"HEAD", @"DELETE", nil];
 
+    /* lzy注170703：
+     
+     1、为了方便开发者自定义请求，暴露一些方便设置请求头的属性。
+     在此，afn给这些常用属性设置了监听；
+     
+     2、初始化一个集合，一旦监听到这些属性有新值，使用这个集合存放。
+     在创建并设置请求的时候，把这些值设置进去。
+     
+     allowsCellularAccess\cachePolicy\HTTPShouldHandleCookies\
+     HTTPShouldUsePipelining\networkServiceType\timeoutInterval
+     
+     */
     self.mutableObservedChangedKeyPaths = [NSMutableSet set];
     for (NSString *keyPath in AFHTTPRequestSerializerObservedKeyPaths()) {
         if ([self respondsToSelector:NSSelectorFromString(keyPath)]) {
@@ -262,7 +301,9 @@ static void *AFHTTPRequestSerializerObserverContext = &AFHTTPRequestSerializerOb
 
 // Workarounds for crashing behavior using Key-Value Observing with XCTest
 // See https://github.com/AFNetworking/AFNetworking/issues/2523
-
+/* lzy注170703：
+ httpRequestSerializer这些属性的setter都被重写了。触发了kvo
+ */
 - (void)setAllowsCellularAccess:(BOOL)allowsCellularAccess {
     [self willChangeValueForKey:NSStringFromSelector(@selector(allowsCellularAccess))];
     _allowsCellularAccess = allowsCellularAccess;
@@ -300,7 +341,7 @@ static void *AFHTTPRequestSerializerObserverContext = &AFHTTPRequestSerializerOb
 }
 
 #pragma mark -
-
+// 当真正使用时，会用 HTTPRequestHeaders 这个方法，来获取对应版本的不可变字典。
 - (NSDictionary *)HTTPRequestHeaders {
     NSDictionary __block *value;
     dispatch_sync(self.requestHeaderModificationQueue, ^{
@@ -308,7 +349,7 @@ static void *AFHTTPRequestSerializerObserverContext = &AFHTTPRequestSerializerOb
     });
     return value;
 }
-
+// 设置 HTTP 头部字段时，都会存储到这个可变字典中
 - (void)setValue:(NSString *)value
 forHTTPHeaderField:(NSString *)field
 {
@@ -324,7 +365,8 @@ forHTTPHeaderField:(NSString *)field
     });
     return value;
 }
-
+/* lzy170614注：这个设置验证字段功能，没有使用过，可以留意一下使用场景。
+ */
 - (void)setAuthorizationHeaderFieldWithUsername:(NSString *)username
                                        password:(NSString *)password
 {
@@ -367,12 +409,19 @@ forHTTPHeaderField:(NSString *)field
     NSMutableURLRequest *mutableRequest = [[NSMutableURLRequest alloc] initWithURL:url];
     mutableRequest.HTTPMethod = method;
 
+    /* lzy注170703：
+     处理请求头：将监听到有新值设定的请求属性mutableRequest集合遍历，并设置到请求中
+     allowsCellularAccess\cachePolicy\HTTPShouldHandleCookies\
+     HTTPShouldUsePipelining\networkServiceType\timeoutInterval
+     */
     for (NSString *keyPath in AFHTTPRequestSerializerObservedKeyPaths()) {
         if ([self.mutableObservedChangedKeyPaths containsObject:keyPath]) {
             [mutableRequest setValue:[self valueForKeyPath:keyPath] forKey:keyPath];
         }
     }
-
+    /* lzy注170703：
+     处理请求头部、参数
+     */
     mutableRequest = [[self requestBySerializingRequest:mutableRequest withParameters:parameters error:error] mutableCopy];
 
 	return mutableRequest;
@@ -479,6 +528,11 @@ forHTTPHeaderField:(NSString *)field
 
     NSMutableURLRequest *mutableRequest = [request mutableCopy];
 
+    /* lzy注170703：
+     使用- (void)setValue:forHTTPHeaderField:
+     设置请求头部的话，会把键值存放在self.mutableHTTPRequestHeaders中，
+     当真正使用时，会用 HTTPRequestHeaders 的getter方法，来获取对应版本的不可变字典。
+     */
     [self.HTTPRequestHeaders enumerateKeysAndObjectsUsingBlock:^(id field, id value, BOOL * __unused stop) {
         if (![request valueForHTTPHeaderField:field]) {
             [mutableRequest setValue:value forHTTPHeaderField:field];
@@ -499,6 +553,10 @@ forHTTPHeaderField:(NSString *)field
                 return nil;
             }
         } else {
+            /* lzy注170703：
+             AFHTTPRequestQueryStringDefaultStyle 默认为 0.
+             AFQueryStringFromParameters函数，将参数转换为查询参数
+             */
             switch (self.queryStringSerializationStyle) {
                 case AFHTTPRequestQueryStringDefaultStyle:
                     query = AFQueryStringFromParameters(parameters);
@@ -509,6 +567,14 @@ forHTTPHeaderField:(NSString *)field
 
     if ([self.HTTPMethodsEncodingParametersInURI containsObject:[[request HTTPMethod] uppercaseString]]) {
         if (query && query.length > 0) {
+            /* lzy注170703：
+             将查询字符串(query)拼接到请求的地址上。
+             若查询字符串已经存在，使用&拼接，
+             不存在，使用?拼接。
+             比如Get请求。
+             self.HTTPMethodsEncodingParametersInURI有三种，get head delete。
+
+             */
             mutableRequest.URL = [NSURL URLWithString:[[mutableRequest.URL absoluteString] stringByAppendingFormat:mutableRequest.URL.query ? @"&%@" : @"?%@", query]];
         }
     } else {
@@ -519,6 +585,9 @@ forHTTPHeaderField:(NSString *)field
         if (![mutableRequest valueForHTTPHeaderField:@"Content-Type"]) {
             [mutableRequest setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
         }
+        /* lzy注170703：
+         将查询字符串(query)设置到body中。不如POST方法。
+         */
         [mutableRequest setHTTPBody:[query dataUsingEncoding:self.stringEncoding]];
     }
 
@@ -528,6 +597,9 @@ forHTTPHeaderField:(NSString *)field
 #pragma mark - NSKeyValueObserving
 
 + (BOOL)automaticallyNotifiesObserversForKey:(NSString *)key {
+    /* lzy注170703：
+     AFHTTPRequestSerializerObservedKeyPaths() 返回一个数组，字符串内容是个各个要监听的属性名。
+     */
     if ([AFHTTPRequestSerializerObservedKeyPaths() containsObject:key]) {
         return NO;
     }
@@ -540,6 +612,7 @@ forHTTPHeaderField:(NSString *)field
                         change:(NSDictionary *)change
                        context:(void *)context
 {
+    // 在这些属性被设置时，会触发 KVO，然后将新的属性存储在一个名为 mutableObservedChangedKeyPaths 中
     if (context == AFHTTPRequestSerializerObserverContext) {
         if ([change[NSKeyValueChangeNewKey] isEqual:[NSNull null]]) {
             [self.mutableObservedChangedKeyPaths removeObject:keyPath];
