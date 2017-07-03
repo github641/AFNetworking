@@ -18,10 +18,20 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+/* lzy注170703：
+ AFSecurityPolicy 主要作用就是验证 HTTPS 请求的证书是否有效，如果 app 中有一些敏感信息或者涉及交易信息，一定要使用HTTPS 来保证交易或者用户信息的安全。
+ 
+ 
+ */
 
 #import <Foundation/Foundation.h>
 #import <Security/Security.h>
-
+/* lzy注170703：
+ 三种验证服务器是否被信任的方式
+ * AFSSLPinningModeNone 是默认的认证方式，只会在系统的信任的证书列表中对服务端返回的证书进行验证
+ * AFSSLPinningModeCertificate 需要客户端预先保存服务端的证书
+ * AFSSLPinningModePublicKey 也需要预先保存服务端发送的证书，但是这里只会验证证书中的公钥是否正确
+ */
 typedef NS_ENUM(NSUInteger, AFSSLPinningMode) {
     AFSSLPinningModeNone,
     AFSSLPinningModePublicKey,
