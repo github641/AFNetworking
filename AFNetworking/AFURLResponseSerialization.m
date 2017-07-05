@@ -49,11 +49,14 @@ static NSError * AFErrorWithUnderlyingError(NSError *error, NSError *underlyingE
 
     return [[NSError alloc] initWithDomain:error.domain code:error.code userInfo:mutableUserInfo];
 }
-
+//判断是不是之前生成的错误信息，是的话返回YES
 static BOOL AFErrorOrUnderlyingErrorHasCodeInDomain(NSError *error, NSInteger code, NSString *domain) {
+    //判断错误域名和传过来的域名是否一致，错误code是否一致
     if ([error.domain isEqualToString:domain] && error.code == code) {
+        
         return YES;
     } else if (error.userInfo[NSUnderlyingErrorKey]) {
+        //如果userInfo的NSUnderlyingErrorKey有值，则在判断一次。
         return AFErrorOrUnderlyingErrorHasCodeInDomain(error.userInfo[NSUnderlyingErrorKey], code, domain);
     }
 
@@ -62,6 +65,7 @@ static BOOL AFErrorOrUnderlyingErrorHasCodeInDomain(NSError *error, NSInteger co
 //移除 JSON 中 null 的函数 AFJSONObjectByRemovingKeysWithNullValues 是一个递归调用的函数。
 static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingOptions readingOptions) {
     if ([JSONObject isKindOfClass:[NSArray class]]) {
+        //生成一个数组，只需要JSONObject.count个，感受到大神写代码的严谨态度了吗...
         NSMutableArray *mutableArray = [NSMutableArray arrayWithCapacity:[(NSArray *)JSONObject count]];
         for (id value in (NSArray *)JSONObject) {
             [mutableArray addObject:AFJSONObjectByRemovingKeysWithNullValues(value, readingOptions)];
@@ -73,7 +77,7 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
         for (id <NSCopying> key in [(NSDictionary *)JSONObject allKeys]) {
             id value = (NSDictionary *)JSONObject[key];
             if (!value || [value isEqual:[NSNull null]]) {
-                // 其中移除 null 靠的就是 [mutableDictionary removeObjectForKey:key] 这一行代码。
+                // 移除 其中 value为 null
                 [mutableDictionary removeObjectForKey:key];
             } else if ([value isKindOfClass:[NSArray class]] || [value isKindOfClass:[NSDictionary class]]) {
                 mutableDictionary[key] = AFJSONObjectByRemovingKeysWithNullValues(value, readingOptions);
@@ -111,9 +115,11 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
                     data:(NSData *)data
                    error:(NSError * __autoreleasing *)error
 {
+    //response是否合法标识
     BOOL responseIsValid = YES;
+    //验证的error
     NSError *validationError = nil;
-
+    //如果存在且是NSHTTPURLResponse
     if (response && [response isKindOfClass:[NSHTTPURLResponse class]]) {
         
         // 根据在初始化方法中初始化的属性 acceptableContentTypes 和 acceptableStatusCodes 来判断当前响应是否有效
@@ -121,7 +127,9 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
         // #1: 返回内容类型无效
         if (self.acceptableContentTypes && ![self.acceptableContentTypes containsObject:[response MIMEType]] &&
             !([response MIMEType] == nil && [data length] == 0)) {
-
+            //进入If块说明解析数据肯定是失败的，这时候要把解析错误信息放到error里。
+            
+            //如果数据长度大于0，而且有响应url
             if ([data length] > 0 && [response URL]) {
                 NSMutableDictionary *mutableUserInfo = [@{
                                                           NSLocalizedDescriptionKey: [NSString stringWithFormat:NSLocalizedStringFromTable(@"Request failed: unacceptable content-type: %@", @"AFNetworking", nil), [response MIMEType]],
@@ -131,10 +139,11 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
                 if (data) {
                     mutableUserInfo[AFNetworkingOperationFailingURLResponseDataErrorKey] = data;
                 }
-
+                //生成错误
                 validationError = AFErrorWithUnderlyingError([NSError errorWithDomain:AFURLResponseSerializationErrorDomain code:NSURLErrorCannotDecodeContentData userInfo:mutableUserInfo], validationError);
             }
-
+            
+            //返回标识
             responseIsValid = NO;
         }
         // #2: 返回状态码无效
@@ -154,7 +163,7 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
             responseIsValid = NO;
         }
     }
-
+  //给开发者传过来的错误指针赋值
     if (error && !responseIsValid) {
         *error = validationError;
     }
@@ -242,8 +251,10 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
                            data:(NSData *)data
                           error:(NSError *__autoreleasing *)error
 {
-    if (![self validateResponse:(NSHTTPURLResponse *)response data:data error:error]) {
-        if (!error || AFErrorOrUnderlyingErrorHasCodeInDomain(*error, NSURLErrorCannotDecodeContentData, AFURLResponseSerializationErrorDomain)) {
+    if (![self validateResponse:(NSHTTPURLResponse *)response data:data error:error]) {// 响应无效
+        if (!error || AFErrorOrUnderlyingErrorHasCodeInDomain(*error, NSURLErrorCannotDecodeContentData, AFURLResponseSerializationErrorDomain)) {// 错误存在、错误码是无法解码二进制内容、错误域名是响应序列化错误域：两个参数是我们之前判断response可接受类型和code时候自己去生成错误的时候填写的
+            
+            // 无效的返回，且错误信息已经填写
             return nil;
         }
     }
@@ -382,6 +393,7 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
                           error:(NSError *__autoreleasing *)error
 {
     if (![self validateResponse:(NSHTTPURLResponse *)response data:data error:error]) {
+        
         if (!error || AFErrorOrUnderlyingErrorHasCodeInDomain(*error, NSURLErrorCannotDecodeContentData, AFURLResponseSerializationErrorDomain)) {
             return nil;
         }
