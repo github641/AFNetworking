@@ -459,10 +459,28 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
          - On iOS 7, `__NSCFLocalSessionTask` and `__NSCFURLSessionTask` are the only two classes that have their own implementations of `resume` and `suspend`, and `__NSCFLocalSessionTask` DOES NOT CALL SUPER. This means both classes need to be swizzled.
          - On iOS 8, `NSURLSessionTask` is the only class that implements `resume` and `suspend`. This means this is the only class that needs to be swizzled.
          - Because `NSURLSessionTask` is not involved in the class hierarchy for every version of iOS, its easier to add the swizzled methods to a dummy class and manage them there.
-         
+
          Some Assumptions:
          - No implementations of `resume` or `suspend` call super. If this were to change in a future version of iOS, we'd need to handle it.
          - No background task classes override `resume` or `suspend`
+         
+         
+         iOS 7和iOS 8在NSURLSessionTask实现上有些许不同，这使得下面的代码实现略显trick
+         关于这个问题，大家做了很多Unit Test，足以证明这个方法是可行的
+         目前我们所知的：
+         * NSURLSessionTasks是一组class的统称，如果你仅仅使用提供的API来获取NSURLSessionTask的class，并不一定返回的是你想要的那个（获取NSURLSessionTask的class目的是为了获取其resume方法）
+         * 简单地使用[NSURLSessionTask class]并不起作用。你需要新建一个NSURLSession，并根据创建的session再构建出一个NSURLSessionTask对象才行。
+         * iOS 7上，localDataTask（下面代码构造出的NSURLSessionDataTask类型的变量，为了获取对应Class）的类型是 NSCFLocalDataTask，NSCFLocalDataTask继承自NSCFLocalSessionTask，NSCFLocalSessionTask继承自__NSCFURLSessionTask。
+         * iOS 8上，localDataTask的类型为NSCFLocalDataTask，NSCFLocalDataTask继承自NSCFLocalSessionTask，NSCFLocalSessionTask继承自NSURLSessionTask
+         * iOS 7上，NSCFLocalSessionTask和NSCFURLSessionTask是仅有的两个实现了resume和suspend方法的类，另外NSCFLocalSessionTask中的resume和suspend并没有调用其父类（即NSCFURLSessionTask）方法，这也意味着两个类的方法都需要进行method swizzling。
+         * iOS 8上，NSURLSessionTask是唯一实现了resume和suspend方法的类。这也意味着其是唯一需要进行method swizzling的类
+         * 因为NSURLSessionTask并不是在每个iOS版本中都存在，所以把这些放在此处（即load函数中），比如给一个dummy class添加swizzled方法都会变得很方便，管理起来也方便。
+         一些假设前提:
+         * 目前iOS中resume和suspend的方法实现中并没有调用对应的父类方法。如果日后iOS改变了这种做法，我们还需要重新处理。
+         * 没有哪个后台task会重写resume和suspend函数
+         
+         
+         
          
          The current solution:
          1) Grab an instance of `__NSCFLocalDataTask` by asking an instance of `NSURLSession` for a data task.
@@ -483,33 +501,55 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
          
          8) Set the current class to the super class, and repeat steps 3-8
          currentClass = [currentClass superclass]
+         
+         
+         
+         * 其实这是被社区大量讨论的一个bug，之前AF因为这个替换方法，会导致偶发性的crash，如果不要这个swizzle则问题不会再出现，但是这样会导致AF中很多UIKit的扩展都不能正常使用。
+         * 原来这是因为iOS7和iOS8的NSURLSessionTask的继承链不同导致的，而且在iOS7继承链中会有两个类都实现了resume和suspend方法。而且子类没有调用父类的方法，我们则需要对着两个类都进行方法替换。而iOS8只需要对一个类进行替换。
+         * 对着注释看，上述方法代码不难理解，用一个while循环，一级一级去获取父类，如果实现了resume方法，则进行替换。
+         
+         这里method swizzling--by冰霜http://www.jianshu.com/p/db6dc23834e3
+         
          */
         
         
         
+        // 1) 首先构建一个NSURLSession对象session，再通过session构建出一个_NSCFLocalDataTask变量
         NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
         NSURLSession * session = [NSURLSession sessionWithConfiguration:configuration];
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnonnull"
         NSURLSessionDataTask *localDataTask = [session dataTaskWithURL:nil];
 #pragma clang diagnostic pop
+        
+        // 2) 获取到af_resume实现的指针
         IMP originalAFResumeIMP = method_getImplementation(class_getInstanceMethod([self class], @selector(af_resume)));
         Class currentClass = [localDataTask class];
         
+        // 3) 检查当前class是否实现了resume。如果实现了，继续第4步。
         while (class_getInstanceMethod(currentClass, @selector(resume))) {
+            
+            // 4) 获取到当前class的父类（superClass）
             Class superClass = [currentClass superclass];
+            // 5) 获取到当前class对于resume实现的指针
             IMP classResumeIMP = method_getImplementation(class_getInstanceMethod(currentClass, @selector(resume)));
+            //  6) 获取到父类对于resume实现的指针
             IMP superclassResumeIMP = method_getImplementation(class_getInstanceMethod(superClass, @selector(resume)));
+            // 7) 如果当前class对于resume的实现和父类不一样（类似iOS7上的情况），并且当前class的resume实现和af_resume不一样，才进行method swizzling。
             if (classResumeIMP != superclassResumeIMP &&
                 originalAFResumeIMP != classResumeIMP) {
                 [self swizzleResumeAndSuspendMethodForClass:currentClass];
             }
+            // 8) 设置当前操作的class为其父类class，重复步骤3~8
             currentClass = [currentClass superclass];
         }
         
         [localDataTask cancel];
         [session finishTasksAndInvalidate];
     }
+    
+
+    
 }
 
 + (void)swizzleResumeAndSuspendMethodForClass:(Class)theClass {
@@ -611,6 +651,24 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     self.sessionConfiguration = configuration;
     // 2. 初始化会话（session），并设置会话的代理以及代理队列
     self.operationQueue = [[NSOperationQueue alloc] init];
+
+    /* lzy注170705：
+     
+     1）首先我们要明确一个概念，这里的并发数仅仅是回调代理的线程并发数。而不是请求网络的线程并发数。请求网络是由NSUrlSession来做的，它内部维护了一个线程池，用来做网络请求。它调度线程,基于底层的CFSocket去发送请求和接收数据。这些线程是并发的。2）明确了这个概念之后，我们来梳理一下AF3.x的整个流程和线程的关系：
+     * 我们一开始初始化sessionManager的时候，一般都是在主线程，（当然不排除有些人喜欢在分线程初始化...）
+     * 然后我们调用get或者post等去请求数据，接着会进行request拼接，AF代理的字典映射，progress的KVO添加等等，到NSUrlSession的resume之前这些准备工作，仍旧是在主线程中的。
+     * 然后调用NSUrlSession的resume，接着就跑到NSUrlSession内部去对网络进行数据请求了,在它内部是多线程并发的去请求数据的。
+     * 紧接着数据请求完成后，回调回来在一开始生成的并发数为1的NSOperationQueue中，这个时候会是多线程串行的回调回来的。（注：不明白的朋友可以看看雷纯峰大神这篇iOS 并发编程之 Operation Queueshttp://blog.leichunfeng.com/blog/2015/07/29/ios-concurrency-programming-operation-queues/）
+     * 然后到返回数据解析那一块，创建了并发的多线程，去对这些数据进行了各种类型的解析。
+     * 最后如果有自定义的completionQueue，则在自定义的queue中回调回来，也就是分线程回调回来，否则就是主队列，主线程中回调结束。
+     3）最后我们来解释解释为什么回调Queue要设置并发数为1：
+     * 我认为AF这么做有以下两点原因：
+     1）众所周知，AF2.x所有的回调是在一条线程，这条线程是AF的常驻线程，而这一条线程正是AF调度request的思想精髓所在，所以第一个目的就是为了和之前版本保持一致。
+     2）因为跟代理相关的一些操作AF都使用了NSLock。所以就算Queue的并发数设置为n，因为多线程回调，锁的等待，导致所提升的程序速度也并不明显。反而多task回调导致的多线程并发，平白浪费了部分性能。
+     而设置Queue的并发数为1，（注：这里虽然回调Queue的并发数为1，仍然会有不止一条线程，但是因为是串行回调，所以同一时间，只会有一条线程在操作AFUrlSessionManager的那些方法。）至少回调的事件，是不需要多线程并发的。回调没有了NSLock的等待时间，所以对时间并没有多大的影响。（注：但是还是会有多线程的操作的，因为设置刚开始调起请求的时候，是在主线程的，而回调则是串行分线程。）
+     当然这仅仅是我个人的看法，如果有不同意见的欢迎交流~
+     
+     */
     //queue并发线程数设置为1
     self.operationQueue.maxConcurrentOperationCount = 1;
     
@@ -1163,7 +1221,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
     
     NSURLSessionAuthChallengeDisposition disposition = NSURLSessionAuthChallengePerformDefaultHandling;
     __block NSURLCredential *credential = nil;
-    
+    //[lzy170619注：判断开发者有否在外面实现自定义的认证方法，如果开发者在外部自己实现了，调用开发者自己的代码。不然使用afn默认的处理方式。]
     if (self.sessionDidReceiveAuthenticationChallenge) {
         // 自定义方法，用来如何应对服务器端的认证挑战
         disposition = self.sessionDidReceiveAuthenticationChallenge(session, challenge, &credential);
@@ -1173,6 +1231,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
             
             // 也就是说服务器端需要客户端返回一个根据认证挑战的保护空间提供的信任（即challenge.protectionSpace.serverTrust）产生的挑战证书。
             // 基于客户端的安全策略来决定是否信任该服务器，不信任的话，也就没必要响应挑战
+//            如果这行返回NO、说明AF内部认证失败，则取消https认证，即取消请求。返回YES则进入if块，用服务器返回的一个serverTrust去生成了一个认证证书。（注：这个serverTrust是服务器传过来的，里面包含了服务器的证书信息，是用来我们本地客户端去验证该证书是否合法用的，后面会更详细的去讲这个参数）然后如果有证书，则用证书认证方式，否则还是用默认的验证方式。最后调用completionHandler传递认证方式和要认证的证书，去做系统根证书验证。
             if ([self.securityPolicy evaluateServerTrust:challenge.protectionSpace.serverTrust forDomain:challenge.protectionSpace.host]) {
                 
                 // 而这个证书就需要使用credentialForTrust:来创建一个NSURLCredential对象
@@ -1193,6 +1252,14 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
     if (completionHandler) {
         completionHandler(disposition, credential);
     }
+    
+    
+    /* lzy注170705：
+     1）首先指定了https为默认的认证方式。
+     2）判断有没有自定义Block:sessionDidReceiveAuthenticationChallenge，有的话，使用我们自定义Block,生成一个认证方式，并且可以给credential赋值，即我们需要接受认证的证书。然后直接调用completionHandler，去根据这两个参数，执行系统的认证。至于这个系统的认证到底做了什么，可以看文章最后，这里暂且略过。
+     3）如果没有自定义Block，我们判断如果服务端的认证方法要求是NSURLAuthenticationMethodServerTrust,则只需要验证服务端证书是否安全（即https的单向认证，这是AF默认处理的认证方式，其他的认证方式，只能由我们自定义Block的实现）
+     */
+    
 }
 
 #pragma mark - NSURLSessionTaskDelegate

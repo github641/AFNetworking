@@ -197,6 +197,7 @@
 		5F4323DD1BF63CCC003B8749 /* GeoTrust_Global_CA_Root.cer in Resources */ = {isa = PBXBuildFile; fileRef = 5F4323DC1BF63CCC003B8749 /* GeoTrust_Global_CA_Root.cer */; };
 		5F4323DE1BF63CCC003B8749 /* GeoTrust_Global_CA_Root.cer in Resources */ = {isa = PBXBuildFile; fileRef = 5F4323DC1BF63CCC003B8749 /* GeoTrust_Global_CA_Root.cer */; };
 		5F4323DF1BF63CCC003B8749 /* GeoTrust_Global_CA_Root.cer in Resources */ = {isa = PBXBuildFile; fileRef = 5F4323DC1BF63CCC003B8749 /* GeoTrust_Global_CA_Root.cer */; };
+		6C22CC381F0CBEE00003366C /* https客户端单向验证.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 6C22CC371F0CBEE00003366C /* https客户端单向验证.jpg */; };
 		6C5027711F06277000707E1A /* afnetworking-arch.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C5027701F06277000707E1A /* afnetworking-arch.png */; };
 		6C5027BC1F0653B800707E1A /* AFURLResponseSerialization.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C5027BB1F0653B800707E1A /* AFURLResponseSerialization.png */; };
 		E91164651DA6A7AE00DFFF56 /* AFPropertyListRequestSerializerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E91164641DA6A7AE00DFFF56 /* AFPropertyListRequestSerializerTests.m */; };
@@ -310,6 +311,7 @@
 		5F4323D41BF63CB0003B8749 /* GoogleComServerTrustChainPath1 */ = {isa = PBXFileReference; lastKnownFileType = folder; path = GoogleComServerTrustChainPath1; sourceTree = "<group>"; };
 		5F4323D81BF63CBA003B8749 /* GoogleComServerTrustChainPath2 */ = {isa = PBXFileReference; lastKnownFileType = folder; path = GoogleComServerTrustChainPath2; sourceTree = "<group>"; };
 		5F4323DC1BF63CCC003B8749 /* GeoTrust_Global_CA_Root.cer */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = GeoTrust_Global_CA_Root.cer; sourceTree = "<group>"; };
+		6C22CC371F0CBEE00003366C /* https客户端单向验证.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "https客户端单向验证.jpg"; sourceTree = "<group>"; };
 		6C5027701F06277000707E1A /* afnetworking-arch.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "afnetworking-arch.png"; sourceTree = "<group>"; };
 		6C5027BB1F0653B800707E1A /* AFURLResponseSerialization.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AFURLResponseSerialization.png; sourceTree = "<group>"; };
 		E91164641DA6A7AE00DFFF56 /* AFPropertyListRequestSerializerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFPropertyListRequestSerializerTests.m; sourceTree = "<group>"; };
@@ -515,6 +517,7 @@
 				299522471BBF125A00859F49 /* AFHTTPSessionManager.m */,
 				299522491BBF125A00859F49 /* AFNetworkReachabilityManager.h */,
 				2995224A1BBF125A00859F49 /* AFNetworkReachabilityManager.m */,
+				6C22CC371F0CBEE00003366C /* https客户端单向验证.jpg */,
 				2995224B1BBF125A00859F49 /* AFSecurityPolicy.h */,
 				2995224C1BBF125A00859F49 /* AFSecurityPolicy.m */,
 				2995224D1BBF125A00859F49 /* AFURLRequestSerialization.h */,
@@ -925,6 +928,7 @@
 			files = (
 				6C5027BC1F0653B800707E1A /* AFURLResponseSerialization.png in Resources */,
 				6C5027711F06277000707E1A /* afnetworking-arch.png in Resources */,
+				6C22CC381F0CBEE00003366C /* https客户端单向验证.jpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

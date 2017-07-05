@@ -62,7 +62,7 @@ static BOOL AFErrorOrUnderlyingErrorHasCodeInDomain(NSError *error, NSInteger co
 
     return NO;
 }
-//移除 JSON 中 null 的函数 AFJSONObjectByRemovingKeysWithNullValues 是一个递归调用的函数。
+// 移除 JSON 中 null 的函数 AFJSONObjectByRemovingKeysWithNullValues 是一个递归调用的函数。
 static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingOptions readingOptions) {
     if ([JSONObject isKindOfClass:[NSArray class]]) {
         //生成一个数组，只需要JSONObject.count个，感受到大神写代码的严谨态度了吗...
