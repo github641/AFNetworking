@@ -36,6 +36,8 @@ typedef NS_ENUM(NSInteger, AFImageDownloadPrioritization) {
 
 /**
  The `AFImageDownloadReceipt` is an object vended by the `AFImageDownloader` when starting a data task. It can be used to cancel active tasks running on the `AFImageDownloader` session. As a general rule, image data tasks should be cancelled using the `AFImageDownloadReceipt` instead of calling `cancel` directly on the `task` itself. The `AFImageDownloader` is optimized to handle duplicate task scenarios as well as pending versus active downloads.
+ 
+ AFImageDownloadReceipt对象是，当AFImageDownloader开始一个数据任务时，返回的。可以用来取消，在AFImageDownloader的session中运行的活跃任务。作为一条基本的准则，image 的数据任务应当使用AFImageDownloadReceipt的cancell方法，而不要去直接使用task自身的 cancel方法。AFImageDownloader对task管理做了优化，具体在于，处理重复的task场景，以及对活跃下载任务的挂起。
  */
 @interface AFImageDownloadReceipt : NSObject
 
@@ -51,20 +53,21 @@ typedef NS_ENUM(NSInteger, AFImageDownloadPrioritization) {
 @end
 
 /** The `AFImageDownloader` class is responsible for downloading images in parallel on a prioritized queue. Incoming downloads are added to the front or back of the queue depending on the download prioritization. Each downloaded image is cached in the underlying `NSURLCache` as well as the in-memory image cache. By default, any download request with a cached image equivalent in the image cache will automatically be served the cached image representation.
+ `AFImageDownloader`类用于处理图片数据的下载，下载方式是在某优先级队列中并发进行。添加的下载任务是放在队列的前面还是后面取决于下载优先级。每一个下载下来的图片数据都被缓存于基本类`NSURLCache`中，也即内存缓存图片数据。默认情况下，任何对于已经缓存过的图片的请求，也使用缓存数据自定返回。
  */
 @interface AFImageDownloader : NSObject
 
-/**
+/**图片数据缓存。默认所有下载的图片数据都被存储在`AFAutoPurgingImageCache`中。
  The image cache used to store all downloaded images in. `AFAutoPurgingImageCache` by default.
  */
 @property (nonatomic, strong, nullable) id <AFImageRequestCache> imageCache;
 
-/**
+/**`AFHTTPSessionManager`用于下载图片数据。默认情况下，`AFHTTPSessionManager`使用`AFImageResponseSerializer`和共享的`NSURLCache`进行配置，来对所有的图片进行下载。
  The `AFHTTPSessionManager` used to download images. By default, this is configured with an `AFImageResponseSerializer`, and a shared `NSURLCache` for all image downloads.
  */
 @property (nonatomic, strong) AFHTTPSessionManager *sessionManager;
 
-/**
+/**这个属性，用于定义队列中将被添加的下载请求，是怎样一个优先顺序。有『先进先出』、『先进后出』两种。默认是『先进先出』。
  Defines the order prioritization of incoming download requests being inserted into the queue. `AFImageDownloadPrioritizationFIFO` by default.
  */
 @property (nonatomic, assign) AFImageDownloadPrioritization downloadPrioritizaton;
