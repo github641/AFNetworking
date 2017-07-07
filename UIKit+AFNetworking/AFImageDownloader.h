@@ -37,7 +37,10 @@ typedef NS_ENUM(NSInteger, AFImageDownloadPrioritization) {
 /**
  The `AFImageDownloadReceipt` is an object vended by the `AFImageDownloader` when starting a data task. It can be used to cancel active tasks running on the `AFImageDownloader` session. As a general rule, image data tasks should be cancelled using the `AFImageDownloadReceipt` instead of calling `cancel` directly on the `task` itself. The `AFImageDownloader` is optimized to handle duplicate task scenarios as well as pending versus active downloads.
  
- AFImageDownloadReceipt对象是，当AFImageDownloader开始一个数据任务时，返回的。可以用来取消，在AFImageDownloader的session中运行的活跃任务。作为一条基本的准则，image 的数据任务应当使用AFImageDownloadReceipt的cancell方法，而不要去直接使用task自身的 cancel方法。AFImageDownloader对task管理做了优化，具体在于，处理重复的task场景，以及对活跃下载任务的挂起。
+ AFImageDownloadReceipt对象是，当AFImageDownloader开始一个数据任务时，返回的。可以用来取消，在AFImageDownloader的session中运行的活跃任务。作为一条基本的准则，image 的数据任务应当使用AFImageDownloadReceipt来cancell任务，而不要去直接使用task自身的 cancel方法。AFImageDownloader对task管理做了优化，具体在于，处理重复的task场景，以及对活跃下载任务的挂起。
+ 具体的取消方法是：- (void)cancelTaskForImageDownloadReceipt:(AFImageDownloadReceipt *)imageDownloadReceipt;
+ 
+ 封装是为了标识每一个task，我们后面可以根据这个AFImageDownloadReceipt来对task做取消操作。
  */
 @interface AFImageDownloadReceipt : NSObject
 
@@ -144,11 +147,11 @@ typedef NS_ENUM(NSInteger, AFImageDownloadPrioritization) {
                                                         success:(nullable void (^)(NSURLRequest *request, NSHTTPURLResponse  * _Nullable response, UIImage *responseObject))success
                                                         failure:(nullable void (^)(NSURLRequest *request, NSHTTPURLResponse * _Nullable response, NSError *error))failure;
 
-/**
+/**通过receipt取消data task，具体是移除关联的成功失败blocks并在必要的时候，cancel task。
  Cancels the data task in the receipt by removing the corresponding success and failure blocks and cancelling the data task if necessary.
 
  If the data task is pending in the queue, it will be cancelled if no other success and failure blocks are registered with the data task. If the data task is currently executing or is already completed, the success and failure blocks are removed and will not be called when the task finishes.
-
+data task在等待队列中，
  @param imageDownloadReceipt The image download receipt to cancel.
  */
 - (void)cancelTaskForImageDownloadReceipt:(AFImageDownloadReceipt *)imageDownloadReceipt;

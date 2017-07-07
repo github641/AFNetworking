@@ -103,7 +103,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-/**
+/**『AutoPuringImageCache』将在给定的内存大小下，把图片数据缓存在内存中。当缓存的总容量达到限定的容量，将把所有图片数据按访问时间排序，把访问时间比较老的图片数据清除，直到达到『保留内存用量preferred memory usage』。每次从缓存访问某图片资源，这个图片的访问日期将会更新。
  The `AutoPurgingImageCache` in an in-memory image cache used to store images up to a given memory capacity. When the memory capacity is reached, the image cache is sorted by last access date, then the oldest image is continuously purged until the preferred memory usage after purge is met. Each time an image is accessed through the cache, the internal access date of the image is updated.
  */
 @interface AFAutoPurgingImageCache : NSObject <AFImageRequestCache>

@@ -42,6 +42,7 @@
         self.image = image;
         self.identifier = identifier;
 
+        // 根据一个像素x个字节 * 像素个数 = 图片总字节数
         CGSize imageSize = CGSizeMake(image.size.width * image.scale, image.size.height * image.scale);
         CGFloat bytesPerPixel = 4.0;
         CGFloat bytesPerSize = imageSize.width * imageSize.height;
@@ -73,18 +74,24 @@
 @implementation AFAutoPurgingImageCache
 
 - (instancetype)init {
+    //默认为内存100M，后者为缓存溢出后保留的内存
     return [self initWithMemoryCapacity:100 * 1024 * 1024 preferredMemoryCapacity:60 * 1024 * 1024];
 }
 
 - (instancetype)initWithMemoryCapacity:(UInt64)memoryCapacity preferredMemoryCapacity:(UInt64)preferredMemoryCapacity {
     if (self = [super init]) {
+        //内存大小
         self.memoryCapacity = memoryCapacity;
+        // 溢出后保留的内存
         self.preferredMemoryUsageAfterPurge = preferredMemoryCapacity;
+        //cache的字典：所有的缓存数据，都被保存在这个字典中，key为url，value为AFCachedImage。
         self.cachedImages = [[NSMutableDictionary alloc] init];
 
+        // 创建并发队列
         NSString *queueName = [NSString stringWithFormat:@"com.alamofire.autopurgingimagecache-%@", [[NSUUID UUID] UUIDString]];
         self.synchronizationQueue = dispatch_queue_create([queueName cStringUsingEncoding:NSASCIIStringEncoding], DISPATCH_QUEUE_CONCURRENT);
 
+        //添加通知，收到内存警告的通知
         [[NSNotificationCenter defaultCenter]
          addObserver:self
          selector:@selector(removeAllImages)

@@ -76,6 +76,16 @@
                        failure:(void (^)(NSURLRequest *request, NSHTTPURLResponse * _Nullable response, NSError *error))failure
 {
 
+    /* lzy注170707：
+     
+     
+     本次加载请求中，如果url如果为nil，
+     
+     在同一个UIImageView多次调用UIKit+AF的设置图片方法时，
+     如果有之前的任务，那么会把同一个图片的前面的加载任务取消掉。
+     
+     有占位图的话，设置占位图后直接退出。
+     */
     if ([urlRequest URL] == nil) {
         [self cancelImageDownloadTask];
         self.image = placeholderImage;
@@ -88,6 +98,7 @@
 
     [self cancelImageDownloadTask];
 
+    
     AFImageDownloader *downloader = [[self class] sharedImageDownloader];
     id <AFImageRequestCache> imageCache = downloader.imageCache;
 
@@ -139,7 +150,9 @@
 
 - (void)cancelImageDownloadTask {
     if (self.af_activeImageDownloadReceipt != nil) {
+        // 如果有receipt对象，对应的downloader，cancel下载任务
         [[self.class sharedImageDownloader] cancelTaskForImageDownloadReceipt:self.af_activeImageDownloadReceipt];
+        // 置空本扩展绑定的Receipt对象
         [self clearActiveDownloadInformation];
      }
 }
