@@ -113,11 +113,14 @@
     });
     return result;
 }
-
+/* lzy注170707：
+ 图片请求成功，缓存之
+ */
 - (void)addImage:(UIImage *)image withIdentifier:(NSString *)identifier {
     dispatch_barrier_async(self.synchronizationQueue, ^{
         AFCachedImage *cacheImage = [[AFCachedImage alloc] initWithImage:image identifier:identifier];
 
+        // 在做网络请求之前，就AFImageDownload就尝试从缓存中取过，其中的本类实例调用了`- (nullable UIImage *)imageforRequest:withAdditionalIdentifier:`。这里居然又做了过滤。管理currentMemoryUsage，并替换了缓存图片
         AFCachedImage *previousCachedImage = self.cachedImages[identifier];
         if (previousCachedImage != nil) {
             self.currentMemoryUsage -= previousCachedImage.totalBytes;
@@ -128,9 +131,13 @@
     });
 
     dispatch_barrier_async(self.synchronizationQueue, ^{
+        // 缓存完后，如果当前内存用量超过预期，计算超出用量作为需要清理的大小，按最后访问时间，排序所有缓存图片，进行移除
         if (self.currentMemoryUsage > self.memoryCapacity) {
             UInt64 bytesToPurge = self.currentMemoryUsage - self.preferredMemoryUsageAfterPurge;
+            
+            // 缓存字典中取出所有缓存图片放数组中
             NSMutableArray <AFCachedImage*> *sortedImages = [NSMutableArray arrayWithArray:self.cachedImages.allValues];
+            // 按最后访问时间排序
             NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc] initWithKey:@"lastAccessDate"
                                                                            ascending:YES];
             [sortedImages sortUsingDescriptors:@[sortDescriptor]];
