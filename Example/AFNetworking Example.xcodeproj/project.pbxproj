@@ -41,6 +41,8 @@
 		29E6F1F41BB9E37200A4466C /* Today Extension Example.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 29E6F1E61BB9E37200A4466C /* Today Extension Example.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		29E6F1F91BB9E56200A4466C /* Post.m in Sources */ = {isa = PBXBuildFile; fileRef = 29E6F19A1BB9DD7300A4466C /* Post.m */; };
 		29E6F1FA1BB9E56500A4466C /* User.m in Sources */ = {isa = PBXBuildFile; fileRef = 29E6F19C1BB9DD7300A4466C /* User.m */; };
+		84DE8C691FAC57280029D453 /* DKReqTool.m in Sources */ = {isa = PBXBuildFile; fileRef = 84DE8C681FAC57280029D453 /* DKReqTool.m */; };
+		84DE8C6F1FAC61380029D453 /* IWHttpTool.m in Sources */ = {isa = PBXBuildFile; fileRef = 84DE8C6D1FAC61380029D453 /* IWHttpTool.m */; };
 		C2BFE0251C11870800BB258D /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = C2BFE0241C11870800BB258D /* AppDelegate.m */; };
 		C2BFE0281C11872D00BB258D /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = C2BFE0271C11872D00BB258D /* AppDelegate.m */; };
 /* End PBXBuildFile section */
@@ -153,6 +155,10 @@
 		29E6F2231BB9E76A00A4466C /* ExtensionDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ExtensionDelegate.m; sourceTree = "<group>"; };
 		29E6F2251BB9E76A00A4466C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		29E6F2271BB9E76B00A4466C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		84DE8C671FAC57280029D453 /* DKReqTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DKReqTool.h; sourceTree = "<group>"; };
+		84DE8C681FAC57280029D453 /* DKReqTool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DKReqTool.m; sourceTree = "<group>"; };
+		84DE8C6D1FAC61380029D453 /* IWHttpTool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = IWHttpTool.m; sourceTree = "<group>"; };
+		84DE8C6E1FAC61380029D453 /* IWHttpTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IWHttpTool.h; sourceTree = "<group>"; };
 		C2BFE0231C11870800BB258D /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		C2BFE0241C11870800BB258D /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		C2BFE0261C11872D00BB258D /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -293,6 +299,10 @@
 		29E6F1771BB9DCB500A4466C /* iOS Example */ = {
 			isa = PBXGroup;
 			children = (
+				84DE8C6E1FAC61380029D453 /* IWHttpTool.h */,
+				84DE8C6D1FAC61380029D453 /* IWHttpTool.m */,
+				84DE8C671FAC57280029D453 /* DKReqTool.h */,
+				84DE8C681FAC57280029D453 /* DKReqTool.m */,
 				C2BFE0261C11872D00BB258D /* AppDelegate.h */,
 				C2BFE0271C11872D00BB258D /* AppDelegate.m */,
 				291BFE071BB9EB3400FFB029 /* Controllers */,
@@ -635,10 +645,12 @@
 				29E6F1A41BB9DD7300A4466C /* Post.m in Sources */,
 				291BFE0D1BB9EB3400FFB029 /* GlobalTimelineViewController.m in Sources */,
 				291BFE0E1BB9EB3400FFB029 /* PostTableViewCell.m in Sources */,
+				84DE8C691FAC57280029D453 /* DKReqTool.m in Sources */,
 				29E6F1A51BB9DD7300A4466C /* User.m in Sources */,
 				29E6F17A1BB9DCB500A4466C /* main.m in Sources */,
 				29E6F1A61BB9DD7300A4466C /* AFAppDotNetAPIClient.m in Sources */,
 				C2BFE0281C11872D00BB258D /* AppDelegate.m in Sources */,
+				84DE8C6F1FAC61380029D453 /* IWHttpTool.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
