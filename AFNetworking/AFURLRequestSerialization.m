@@ -615,7 +615,14 @@ forHTTPHeaderField:(NSString *)field
             }
         }
     }
-    
+    /* lzy171218注:
+     self.HTTPMethodsEncodingParametersInURI中是：
+     GET,
+     HEAD,
+     DELETE
+     所以GET方法，部分项目要加密body，需要用POST。GET不会走到加密body的分支。
+     self.HTTPMethodsEncodingParametersInURI，变量名可以推断出，定义了哪些http请求方式，需要把请求参数编码到请求URL中。
+     */
     if ([self.HTTPMethodsEncodingParametersInURI containsObject:[[request HTTPMethod] uppercaseString]]) {
         if (query && query.length > 0) {
             /* lzy注170703：
